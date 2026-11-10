@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import app.silenttrap.MainActivity
 import app.silenttrap.R
 import app.silenttrap.SilentTrapApp
+import app.silenttrap.audio.AudioConfig
 import app.silenttrap.audio.AudioCaptureEngine
 import app.silenttrap.data.FileIntegrity
 import app.silenttrap.audio.WavWriter
@@ -100,7 +101,7 @@ class ListeningService : Service() {
         }
         val name = app.segments.allocateFileName(app.segments.suggestFileName())
         val file = app.segments.newFile(name)
-        WavWriter.write(file, segment.samples, app.silenttrap.audio.AudioConfig.SAMPLE_RATE)
+        WavWriter.write(file, segment.samples, AudioConfig.SAMPLE_RATE)
         val sha256 = runCatching { FileIntegrity.sha256(file) }
             .onFailure { app.reliabilityLog.record("CHECKSUM_FAILED", "file=${file.name}; ${it.message}") }
             .getOrNull()
