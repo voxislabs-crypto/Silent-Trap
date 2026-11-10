@@ -1,0 +1,4 @@
+-keep class com.konovalov.vad.** { *; }
+-keep class ai.onnxruntime.** { *; }
+-keep class cn.enaium.rnnoise.** { *; }
+-keep class com.google.android.gms.** { *; }

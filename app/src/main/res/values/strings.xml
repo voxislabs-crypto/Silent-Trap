@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Silent Trap</string>
+    <string name="listening_channel">Listening</string>
+    <string name="listening_channel_desc">Shows while Silent Trap is using the microphone.</string>
+</resources>
