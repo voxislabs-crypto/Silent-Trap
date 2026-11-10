@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "app.silenttrap"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "app.silenttrap"
@@ -68,7 +68,5 @@ dependencies {
 
     implementation(libs.play.services.auth)
     implementation(libs.silero)
-    implementation(libs.rnnoise)
-
     testImplementation(libs.junit)
 }

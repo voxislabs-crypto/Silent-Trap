@@ -220,13 +220,6 @@ private fun StatusCard(live: LiveStatus) {
             live.message?.let { message ->
                 Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
-            if (live.noiseReductionFallback) {
-                Text(
-                    "Noise reduction is unavailable on this device. Clips still get the high-pass filter and gain.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }

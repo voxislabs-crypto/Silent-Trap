@@ -103,7 +103,7 @@ fun SettingsScreen(
             )
             SectionTitle("Amplification")
             Text(
-                "Saved clips are gained, then softly clipped. Whisper makeup lifts a clip that is still quiet after that gain. Hardware noise suppression stays off, because it removes whispers.",
+                "Saved clips are gained, then softly clipped. Whisper makeup lifts a clip that is still quiet after that gain. Software noise reduction is not included in this build. Hardware noise suppression stays off, because it removes whispers.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -125,12 +125,6 @@ fun SettingsScreen(
                 detail = "Cuts rumble around 120 Hz before the gain multiplies it.",
                 checked = settings.highPass,
                 onChecked = { checked -> onChange { it.copy(highPass = checked) } },
-            )
-            ToggleRow(
-                title = "Noise reduction",
-                detail = "RNNoise runs after the gain, so a whisper is loud enough to keep. Turn this off if quiet speech sounds thin.",
-                checked = settings.noiseReduction,
-                onChecked = { checked -> onChange { it.copy(noiseReduction = checked) } },
             )
             SectionTitle("Drive")
             ToggleRow(

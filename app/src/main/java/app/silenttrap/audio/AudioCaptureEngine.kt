@@ -10,7 +10,6 @@ import android.util.Log
 import app.silenttrap.data.CaptureSettings
 import app.silenttrap.data.LiveStatusStore
 import app.silenttrap.data.RunState
-import app.silenttrap.noise.RnnoiseReducer
 import app.silenttrap.vad.SileroSpeechDetector
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -21,7 +20,6 @@ data class CapturedSegment(
     val durationMs: Long,
     val inputPeakDbfs: Float,
     val outputPeakDbfs: Float,
-    val noiseReductionApplied: Boolean,
 )
 
 class AudioCaptureEngine(
@@ -70,7 +68,6 @@ class AudioCaptureEngine(
                     runState = RunState.LISTENING,
                     micLabel = opened.label,
                     message = null,
-                    noiseReductionFallback = RnnoiseReducer.failed,
                 )
             }
             capture(opened.recorder, detector)
@@ -155,7 +152,6 @@ class AudioCaptureEngine(
                         runState = if (speech) RunState.SPEECH else RunState.LISTENING,
                         levelDbfs = Level.dbfs(rms).roundToInt().coerceIn(-90, 0),
                         analysisGain = gain,
-                        noiseReductionFallback = RnnoiseReducer.failed,
                     )
                 }
 
@@ -181,25 +177,18 @@ class AudioCaptureEngine(
 
     private fun process(pcm: ShortArray, settings: CaptureSettings): CapturedSegment {
         val inputPeak = Level.dbfs(Level.peak(SegmentSignalProcessor.shortsToFloat(pcm)))
-        var samples = SegmentSignalProcessor.applyUserGain(
-            SegmentSignalProcessor.shortsToFloat(pcm),
-            settings.gain,
+        val samples = SegmentSignalProcessor.whisperMakeup(
+            SegmentSignalProcessor.applyUserGain(
+                SegmentSignalProcessor.shortsToFloat(pcm),
+                settings.gain,
+            ),
+            settings.whisperMakeup,
         )
-        var reduced = false
-        if (settings.noiseReduction) {
-            val denoised = RnnoiseReducer.reduce(samples)
-            if (denoised != null) {
-                samples = denoised
-                reduced = true
-            }
-        }
-        samples = SegmentSignalProcessor.whisperMakeup(samples, settings.whisperMakeup)
         return CapturedSegment(
             samples = samples,
             durationMs = pcm.size * 1000L / AudioConfig.SAMPLE_RATE,
             inputPeakDbfs = inputPeak,
             outputPeakDbfs = Level.dbfs(Level.peak(samples)),
-            noiseReductionApplied = reduced,
         )
     }
 

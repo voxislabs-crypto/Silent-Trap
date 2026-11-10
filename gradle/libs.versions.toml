@@ -10,7 +10,6 @@ work = "2.10.1"
 coroutines = "1.10.2"
 playServicesAuth = "21.3.0"
 silero = "2.0.10"
-rnnoise = "1.0.2"
 junit = "4.13.2"
 
 [libraries]
@@ -29,7 +28,6 @@ compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 compose-material-icons = { group = "androidx.compose.material", name = "material-icons-extended" }
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 silero = { group = "com.github.gkonovalov.android-vad", name = "silero", version.ref = "silero" }
-rnnoise = { group = "cn.enaium.rnnoise", name = "rnnoise-kmp", version.ref = "rnnoise" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]

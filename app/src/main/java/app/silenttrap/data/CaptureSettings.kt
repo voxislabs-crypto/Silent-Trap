@@ -5,7 +5,6 @@ data class CaptureSettings(
     val preRollMs: Int = 3_000,
     val postRollMs: Int = 3_000,
     val gain: Float = 12f,
-    val noiseReduction: Boolean = true,
     val highPass: Boolean = true,
     val whisperMakeup: Boolean = true,
     val autoUpload: Boolean = true,

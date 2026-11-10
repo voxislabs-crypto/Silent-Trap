@@ -5,7 +5,6 @@ import app.silenttrap.audio.BiquadHighPass
 import app.silenttrap.audio.CircularShortBuffer
 import app.silenttrap.audio.EnergySpeech
 import app.silenttrap.audio.Level
-import app.silenttrap.audio.Resampler
 import app.silenttrap.audio.SegmentAssembler
 import app.silenttrap.audio.SegmentSignalProcessor
 import app.silenttrap.audio.SpeechDecision
@@ -28,7 +27,6 @@ object LogicChecks {
         highPassRemovesDcAndKeepsVoice()
         assemblerKeepsPreRollSpeechAndPostRoll()
         speechDuringPostRollExtendsTheClip()
-        resamplerRoundTripsLength()
         wavHeaderMatchesPcm()
     }
 
@@ -122,14 +120,6 @@ object LogicChecks {
         val done = assembler.push(frame(6), false)
         check(done != null, "extended clip missing")
         check(done!!.last() == 6.toShort(), "post-roll reached the later silence")
-    }
-
-    private fun resamplerRoundTripsLength() {
-        val input = FloatArray(10) { it / 10f }
-        val up = Resampler.upsample3(input)
-        check(up.size == 30, "upsample ${up.size}")
-        val down = Resampler.downsample3(up, input.size)
-        check(down.size == 10, "downsample")
     }
 
     private fun wavHeaderMatchesPcm() {

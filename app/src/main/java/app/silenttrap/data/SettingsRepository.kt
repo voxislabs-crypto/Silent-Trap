@@ -47,7 +47,6 @@ class SettingsRepository(context: Context) {
                 prefs[KEY_PRE] = next.preRollMs
                 prefs[KEY_POST] = next.postRollMs
                 prefs[KEY_GAIN] = next.gain
-                prefs[KEY_NR] = next.noiseReduction
                 prefs[KEY_HP] = next.highPass
                 prefs[KEY_MAKEUP] = next.whisperMakeup
                 prefs[KEY_UPLOAD] = next.autoUpload
@@ -63,7 +62,6 @@ class SettingsRepository(context: Context) {
             preRollMs = this[KEY_PRE] ?: 3_000,
             postRollMs = this[KEY_POST] ?: 3_000,
             gain = this[KEY_GAIN] ?: 12f,
-            noiseReduction = this[KEY_NR] ?: true,
             highPass = this[KEY_HP] ?: true,
             whisperMakeup = this[KEY_MAKEUP] ?: true,
             autoUpload = this[KEY_UPLOAD] ?: true,
@@ -77,7 +75,6 @@ class SettingsRepository(context: Context) {
         val KEY_PRE = intPreferencesKey("pre_roll_ms")
         val KEY_POST = intPreferencesKey("post_roll_ms")
         val KEY_GAIN = floatPreferencesKey("gain")
-        val KEY_NR = booleanPreferencesKey("noise_reduction")
         val KEY_HP = booleanPreferencesKey("high_pass")
         val KEY_MAKEUP = booleanPreferencesKey("whisper_makeup")
         val KEY_UPLOAD = booleanPreferencesKey("auto_upload")

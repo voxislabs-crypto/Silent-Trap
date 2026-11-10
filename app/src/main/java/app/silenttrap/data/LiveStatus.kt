@@ -18,7 +18,6 @@ data class LiveStatus(
     val pendingSaves: Int = 0,
     val uploading: Int = 0,
     val message: String? = null,
-    val noiseReductionFallback: Boolean = false,
 )
 
 class LiveStatusStore {

@@ -32,7 +32,7 @@ Silent Trap does three things about that:
 
 Hardware noise suppression is turned off. It treats whispers as noise. The app prefers the raw `UNPROCESSED` microphone when the phone allows it, and falls back to the normal mic.
 
-A 120 Hz high-pass runs before the save gain so rumble is not amplified. RNNoise is optional and runs **after** the gain, so the whisper is at speech level before noise reduction. If the native library does not load, the clip is still saved with the high-pass and gain. If quiet speech sounds watery, turn noise reduction off.
+A 120 Hz high-pass runs before the save gain so rumble is not amplified. Software noise reduction is not included in this build. Clips still receive the high-pass filter, saved gain, and whisper makeup.
 
 The home screen shows the live input level and the detector boost on the current frame. Each clip shows the input peak and the saved peak, so you can see the amplification.
 
@@ -76,7 +76,6 @@ If sign-in succeeds but upload returns 403, the Drive API is not enabled, the te
 
 - `audio` — ring buffer, segment assembly, high-pass, whisper gain, WAV
 - `vad` — Silero through `com.github.gkonovalov.android-vad:silero`
-- `noise` — RNNoise through `cn.enaium.rnnoise:rnnoise-kmp`, with a gain-and-filter fallback
 - `service` — microphone foreground service
 - `drive` — sign-in, folder create, multipart upload, WorkManager retry
 - `ui` — start/stop, meter, clip list, settings
@@ -91,4 +90,4 @@ If sign-in succeeds but upload returns 403, the Drive API is not enabled, the te
 
 On-device transcription (a small Whisper model) is left out on purpose. The model is large and would compete with capture. The clip list is the place to add it later.
 
-Release minification is off so ONNX Runtime, RNNoise, and Play services are not stripped before the release build is tried on a phone.
+Release minification is off so ONNX Runtime and Play services are not stripped before the release build is tried on a phone.
