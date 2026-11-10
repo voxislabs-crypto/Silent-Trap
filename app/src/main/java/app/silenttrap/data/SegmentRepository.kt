@@ -41,6 +41,7 @@ class SegmentRepository(context: Context) {
         inputPeakDbfs: Float,
         outputPeakDbfs: Float,
         uploadState: UploadState,
+        sha256: String? = null,
     ): SegmentRecord {
         synchronized(lock) {
             val record = SegmentRecord(
@@ -52,6 +53,7 @@ class SegmentRepository(context: Context) {
                 outputPeakDbfs = outputPeakDbfs,
                 uploadState = uploadState,
                 localDeleted = !samplesSaved,
+                sha256 = sha256,
             )
             _records.value = listOf(record) + _records.value
             persistLocked()
@@ -88,7 +90,9 @@ class SegmentRepository(context: Context) {
         synchronized(lock) {
             val record = _records.value.firstOrNull { it.id == id } ?: return
             if (!record.localDeleted) {
-                fileFor(record).delete()
+                val file = fileFor(record)
+                file.delete()
+                FileIntegrity.sidecarFor(file).delete()
             }
             _records.value = _records.value.filterNot { it.id == id }
             persistLocked()
@@ -106,7 +110,11 @@ class SegmentRepository(context: Context) {
             val drop = candidates.drop(keep)
             if (drop.isEmpty()) return
             val dropIds = drop.map { it.id }.toSet()
-            drop.forEach { fileFor(it).delete() }
+            drop.forEach {
+                val file = fileFor(it)
+                file.delete()
+                FileIntegrity.sidecarFor(file).delete()
+            }
             _records.value = _records.value.map { record ->
                 if (record.id in dropIds) record.copy(localDeleted = true) else record
             }
@@ -175,6 +183,7 @@ class SegmentRepository(context: Context) {
                 inputPeakDbfs = -90f,
                 outputPeakDbfs = -90f,
                 uploadState = UploadState.LOCAL_ONLY,
+                sha256 = FileIntegrity.readSidecar(file),
             )
         }
     }
@@ -203,6 +212,7 @@ class SegmentRepository(context: Context) {
         put("inputPeakDbfs", inputPeakDbfs.toDouble())
         put("outputPeakDbfs", outputPeakDbfs.toDouble())
         put("uploadState", uploadState.name)
+        put("sha256", sha256)
         put("driveFileId", driveFileId)
         put("error", error)
         put("localDeleted", localDeleted)
@@ -222,6 +232,7 @@ class SegmentRepository(context: Context) {
             driveFileId = optString("driveFileId").ifBlank { null },
             error = optString("error").ifBlank { null },
             localDeleted = optBoolean("localDeleted", false),
+            sha256 = optString("sha256").ifBlank { null },
         )
     }
 

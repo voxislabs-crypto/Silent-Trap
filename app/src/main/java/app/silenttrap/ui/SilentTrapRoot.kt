@@ -173,6 +173,20 @@ fun SilentTrapRoot() {
                             accountEmail = null
                         }
                     },
+                    onShareReliabilityLog = {
+                        val file = app.reliabilityLog.file
+                        if (!file.exists()) {
+                            scope.launch { snackbar.showSnackbar("No recording events have been logged yet") }
+                        } else {
+                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+                            val send = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(send, "Share recording log"))
+                        }
+                    },
                 )
             }
         }

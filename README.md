@@ -36,6 +36,8 @@ A 120 Hz high-pass runs before the save gain so rumble is not amplified. Softwar
 
 The home screen shows the live input level and the detector boost on the current frame. Each clip shows the input peak and the saved peak, so you can see the amplification.
 
+New clips include a SHA-256 checksum in the clip list and Drive file description, plus a `.sha256` sidecar while the WAV remains on the phone. The checksum can detect later file changes; it does not prove when or where the recording was made. Settings can share an app-event log with capture starts, stops, interruptions, low input, and low storage. The log contains no microphone audio.
+
 If the room is noisy and clips open too often, raise the VAD threshold toward 0.45 or 0.60. If a whisper is missed, lower it toward 0.15, raise the save gain, and move the phone closer. Watch the meter: if it never moves off −90 dBFS, the mic is blocked or permission was denied.
 
 ## Run it

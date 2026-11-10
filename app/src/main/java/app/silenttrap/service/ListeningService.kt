@@ -9,11 +9,13 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.StatFs
 import androidx.core.app.NotificationCompat
 import app.silenttrap.MainActivity
 import app.silenttrap.R
 import app.silenttrap.SilentTrapApp
 import app.silenttrap.audio.AudioCaptureEngine
+import app.silenttrap.data.FileIntegrity
 import app.silenttrap.audio.WavWriter
 import app.silenttrap.data.RunState
 import app.silenttrap.data.UploadState
@@ -47,6 +49,7 @@ class ListeningService : Service() {
         try {
             startInForeground(getString(R.string.app_name), "Starting microphone")
         } catch (error: SecurityException) {
+            (application as SilentTrapApp).reliabilityLog.record("CAPTURE_START_FAILED", "Microphone permission is missing")
             (application as SilentTrapApp).live.update {
                 it.copy(runState = RunState.ERROR, message = "Microphone permission is missing")
             }
@@ -70,10 +73,12 @@ class ListeningService : Service() {
         if (engine != null) return
         val app = application as SilentTrapApp
         acquireWakeLock()
+        app.reliabilityLog.beginSession()
         val capture = AudioCaptureEngine(
             context = this,
             settings = { app.settings.current.value },
             live = app.live,
+            reliabilityLog = app.reliabilityLog,
             onSegment = { segment -> saveSegment(segment) },
         )
         engine = capture
@@ -83,9 +88,26 @@ class ListeningService : Service() {
     private fun saveSegment(segment: app.silenttrap.audio.CapturedSegment) {
         val app = application as SilentTrapApp
         val settings = app.settings.current.value
+        val availableBytes = StatFs(filesDir.absolutePath).availableBytes
+        val lowStorage = availableBytes < LOW_STORAGE_WARNING_BYTES
+        val previousLowStorage = app.live.status.value.lowStorage
+        app.live.update { it.copy(lowStorage = lowStorage) }
+        if (lowStorage != previousLowStorage) {
+            app.reliabilityLog.record(
+                if (lowStorage) "LOW_STORAGE" else "STORAGE_RECOVERED",
+                "availableBytes=$availableBytes",
+            )
+        }
         val name = app.segments.allocateFileName(app.segments.suggestFileName())
         val file = app.segments.newFile(name)
         WavWriter.write(file, segment.samples, app.silenttrap.audio.AudioConfig.SAMPLE_RATE)
+        val sha256 = runCatching { FileIntegrity.sha256(file) }
+            .onFailure { app.reliabilityLog.record("CHECKSUM_FAILED", "file=${file.name}; ${it.message}") }
+            .getOrNull()
+        if (sha256 != null) {
+            runCatching { FileIntegrity.writeSidecar(file, sha256) }
+                .onFailure { app.reliabilityLog.record("CHECKSUM_SIDECAR_FAILED", "file=${file.name}; ${it.message}") }
+        }
         val signedIn = DriveAuth.account(this) != null
         val state = when {
             settings.autoUpload && signedIn -> UploadState.PENDING
@@ -99,7 +121,9 @@ class ListeningService : Service() {
             inputPeakDbfs = segment.inputPeakDbfs,
             outputPeakDbfs = segment.outputPeakDbfs,
             uploadState = state,
+            sha256 = sha256,
         )
+        app.reliabilityLog.record("CLIP_SAVED", "file=${file.name}; sha256=${sha256 ?: "unavailable"}")
         if (settings.autoUpload && signedIn) {
             UploadScheduler.enqueue(this, record.id)
         }
@@ -116,6 +140,8 @@ class ListeningService : Service() {
                 pendingSaves = status.pendingSaves,
                 message = status.message,
                 micLabel = status.micLabel,
+                lowInput = status.lowInput,
+                lowStorage = status.lowStorage,
             )
         }.distinctUntilChanged()
         scope.launch {
@@ -128,6 +154,7 @@ class ListeningService : Service() {
             }.collect { (note, uploading) ->
                 app.live.update { it.copy(uploading = uploading) }
                 if (note.runState == RunState.ERROR) {
+                    app.reliabilityLog.endSession("capture_error", note.message)
                     startInForeground("Microphone problem", note.message ?: "Recording stopped")
                     stopSelf()
                     return@collect
@@ -135,6 +162,8 @@ class ListeningService : Service() {
                 if (note.runState == RunState.IDLE) return@collect
                 val title = if (note.runState == RunState.SPEECH) "Speech heard" else "Silent Trap is listening"
                 val detail = when {
+                    note.lowStorage -> "Storage is low; clips may fail to save"
+                    note.lowInput -> "Input has remained near silence"
                     uploading > 0 && note.pendingSaves > 0 -> "Saving a clip, uploading $uploading"
                     uploading > 0 -> "Uploading $uploading"
                     note.pendingSaves > 0 -> "Saving a clip"
@@ -151,9 +180,12 @@ class ListeningService : Service() {
         val pendingSaves: Int,
         val message: String?,
         val micLabel: String,
+        val lowInput: Boolean,
+        val lowStorage: Boolean,
     )
 
     private fun stopListening() {
+        (application as SilentTrapApp).reliabilityLog.endSession("user_stopped")
         engine?.shutdown()
         engine = null
         releaseWakeLock()
@@ -217,6 +249,7 @@ class ListeningService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 42
         private const val ACTION_STOP = "app.silenttrap.STOP"
+        private const val LOW_STORAGE_WARNING_BYTES = 100L * 1024L * 1024L
 
         fun start(context: Context) {
             val intent = Intent(context, ListeningService::class.java)

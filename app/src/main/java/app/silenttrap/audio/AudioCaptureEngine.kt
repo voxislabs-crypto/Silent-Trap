@@ -6,9 +6,11 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.audiofx.NoiseSuppressor
+import android.os.SystemClock
 import android.util.Log
 import app.silenttrap.data.CaptureSettings
 import app.silenttrap.data.LiveStatusStore
+import app.silenttrap.data.ReliabilityLog
 import app.silenttrap.data.RunState
 import app.silenttrap.vad.SileroSpeechDetector
 import java.util.concurrent.Executors
@@ -26,6 +28,7 @@ class AudioCaptureEngine(
     private val context: Context,
     private val settings: () -> CaptureSettings,
     private val live: LiveStatusStore,
+    private val reliabilityLog: ReliabilityLog,
     private val onSegment: (CapturedSegment) -> Unit,
 ) {
     private val running = AtomicBoolean(false)
@@ -68,6 +71,7 @@ class AudioCaptureEngine(
                     runState = RunState.LISTENING,
                     micLabel = opened.label,
                     message = null,
+                    lowInput = false,
                 )
             }
             capture(opened.recorder, detector)
@@ -91,7 +95,7 @@ class AudioCaptureEngine(
                 release()
             }
             if (live.status.value.runState != RunState.ERROR) {
-                live.update { it.copy(runState = RunState.IDLE, analysisGain = 1f) }
+                live.update { it.copy(runState = RunState.IDLE, analysisGain = 1f, lowInput = false) }
             }
         }
     }
@@ -107,6 +111,8 @@ class AudioCaptureEngine(
         val floor = NoiseFloorTracker()
         val gate = SpeechGate()
         var highPassWasOn = false
+        var lowInputSince: Long? = null
+        var lowInputReported = false
         val incoming = ShortArray(AudioConfig.FRAME_SAMPLES * 4)
         val frame = ShortArray(AudioConfig.FRAME_SAMPLES)
         var filled = 0
@@ -135,6 +141,22 @@ class AudioCaptureEngine(
                 }
 
                 val rms = Level.rms(frame)
+                val now = SystemClock.elapsedRealtime()
+                if (rms < LOW_INPUT_RMS) {
+                    val since = lowInputSince ?: now.also { lowInputSince = it }
+                    if (!lowInputReported && now - since >= LOW_INPUT_WARNING_MS) {
+                        lowInputReported = true
+                        live.update { it.copy(lowInput = true) }
+                        reliabilityLog.record("INPUT_NEAR_SILENCE", "levelDbfs=${Level.dbfs(rms)}")
+                    }
+                } else {
+                    lowInputSince = null
+                    if (lowInputReported) {
+                        lowInputReported = false
+                        live.update { it.copy(lowInput = false) }
+                        reliabilityLog.record("INPUT_SIGNAL_RETURNED")
+                    }
+                }
                 val gain = WhisperGain.analysisGain(rms, current.vadThreshold)
                 val boosted = WhisperGain.boostShorts(frame, gain)
                 val silero = detector.isSpeech(boosted, current.vadThreshold)
@@ -168,6 +190,7 @@ class AudioCaptureEngine(
                 onSegment(process(pcm, settings))
             } catch (error: Throwable) {
                 Log.e(TAG, "Failed to process a segment", error)
+                reliabilityLog.record("CLIP_SAVE_FAILED", error.message)
                 live.update { it.copy(message = error.message ?: "Could not save the clip") }
             } finally {
                 live.update { it.copy(pendingSaves = (it.pendingSaves - 1).coerceAtLeast(0)) }
@@ -245,5 +268,7 @@ class AudioCaptureEngine(
 
     private companion object {
         const val TAG = "SilentTrap"
+        const val LOW_INPUT_RMS = 0.00003f
+        const val LOW_INPUT_WARNING_MS = 10_000L
     }
 }

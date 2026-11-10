@@ -25,7 +25,7 @@ class UploadWorker(
         }
         app.segments.update(id) { it.copy(uploadState = UploadState.UPLOADING, error = null) }
         return try {
-            val driveId = DriveClient(applicationContext).uploadWav(file)
+            val driveId = DriveClient(applicationContext).uploadWav(file, record.sha256)
             app.segments.update(id) {
                 it.copy(uploadState = UploadState.UPLOADED, driveFileId = driveId, error = null)
             }

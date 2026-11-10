@@ -23,16 +23,16 @@ class DriveClient(private val context: Context) {
         prefs.edit().remove(KEY_FOLDER).apply()
     }
 
-    fun uploadWav(file: File): String {
+    fun uploadWav(file: File, sha256: String?): String {
         val token = token()
         val folderId = folderId(token)
         return try {
-            upload(token, folderId, file)
+            upload(token, folderId, file, sha256)
         } catch (error: DriveHttpException) {
             if (error.code == 401) {
                 GoogleAuthUtil.clearToken(context, token)
                 val fresh = token()
-                upload(fresh, folderId(fresh), file)
+                upload(fresh, folderId(fresh), file, sha256)
             } else {
                 throw error
             }
@@ -95,11 +95,12 @@ class DriveClient(private val context: Context) {
         }
     }
 
-    private fun upload(token: String, folderId: String, file: File): String {
+    private fun upload(token: String, folderId: String, file: File, sha256: String?): String {
         val boundary = "silenttrap_${System.currentTimeMillis()}"
         val metadata = JSONObject()
             .put("name", file.name)
             .put("parents", org.json.JSONArray().put(folderId))
+        if (sha256 != null) metadata.put("description", "SHA-256: $sha256")
             .toString()
         val connection = open(
             "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id",

@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import app.silenttrap.data.LiveStatusStore
+import app.silenttrap.data.ReliabilityLog
 import app.silenttrap.data.SegmentRepository
 import app.silenttrap.data.SettingsRepository
 import app.silenttrap.drive.UploadScheduler
@@ -18,6 +19,8 @@ class SilentTrapApp : Application() {
         private set
     lateinit var segments: SegmentRepository
         private set
+    lateinit var reliabilityLog: ReliabilityLog
+        private set
     val live = LiveStatusStore()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -26,6 +29,8 @@ class SilentTrapApp : Application() {
         super.onCreate()
         settings = SettingsRepository(this)
         segments = SegmentRepository(this)
+        reliabilityLog = ReliabilityLog(this)
+        reliabilityLog.recoverUnfinishedSession()
         createChannel()
         scope.launch {
             settings.awaitReady()

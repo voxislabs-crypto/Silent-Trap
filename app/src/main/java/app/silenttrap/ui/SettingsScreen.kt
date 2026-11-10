@@ -44,6 +44,7 @@ fun SettingsScreen(
     onChange: ((CaptureSettings) -> CaptureSettings) -> Unit,
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
+    onShareReliabilityLog: () -> Unit,
 ) {
     val context = LocalContext.current
     val power = context.getSystemService(PowerManager::class.java)
@@ -191,6 +192,15 @@ fun SettingsScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Open app settings") }
+            SectionTitle("Recording log")
+            Text(
+                "The log records app events and interruptions, not microphone audio. SHA-256 checksums help detect file changes but do not prove when or where a recording was made.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(onClick = onShareReliabilityLog, modifier = Modifier.fillMaxWidth()) {
+                Text("Share recording log")
+            }
             SectionTitle("Transcription")
             Text(
                 "On-device transcription is not included. A small Whisper model can be added later. The model is large, and running it on every clip would compete with whisper capture.",

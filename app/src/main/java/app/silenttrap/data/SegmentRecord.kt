@@ -19,4 +19,5 @@ data class SegmentRecord(
     val driveFileId: String? = null,
     val error: String? = null,
     val localDeleted: Boolean = false,
+    val sha256: String? = null,
 )

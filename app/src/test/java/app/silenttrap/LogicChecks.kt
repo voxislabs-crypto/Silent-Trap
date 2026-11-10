@@ -11,6 +11,7 @@ import app.silenttrap.audio.SpeechDecision
 import app.silenttrap.audio.SpeechGate
 import app.silenttrap.audio.WavWriter
 import app.silenttrap.audio.WhisperGain
+import app.silenttrap.data.FileIntegrity
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -25,6 +26,7 @@ object LogicChecks {
         speechGateHoldsThroughShortGaps()
         sensitiveModeUsesEitherDetector()
         highPassRemovesDcAndKeepsVoice()
+        fileChecksumMatchesKnownValue()
         assemblerKeepsPreRollSpeechAndPostRoll()
         speechDuringPostRollExtendsTheClip()
         wavHeaderMatchesPcm()
@@ -89,6 +91,17 @@ object LogicChecks {
         tone.process(voice)
         val tail = voice.copyOfRange(voice.size - 1_600, voice.size)
         check(Level.rms(tail) > 0.05f, "voice rms ${Level.rms(tail)}")
+    }
+
+    private fun fileChecksumMatchesKnownValue() {
+        val file = File(System.getProperty("java.io.tmpdir"), "silent-trap-hash-check.bin")
+        file.writeText("abc")
+        val hash = FileIntegrity.sha256(file)
+        check(hash == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", "SHA-256")
+        FileIntegrity.writeSidecar(file, hash)
+        check(FileIntegrity.readSidecar(file) == hash, "checksum sidecar")
+        FileIntegrity.sidecarFor(file).delete()
+        file.delete()
     }
 
     private fun assemblerKeepsPreRollSpeechAndPostRoll() {
